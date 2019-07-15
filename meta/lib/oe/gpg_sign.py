@@ -123,6 +123,16 @@ class LocalSigner(object):
         return ret
 
 
+class SignFailedError(bb.build.FuncFailed):
+    def __init__(self, description, name=None, logfile=None):
+        self.description = description
+        self.name = name
+        self.logfile = logfile
+
+    def __str__(self):
+        return 'Signing failed: %s' % self.description
+
+
 def get_signer(d, backend):
     """Get signer object for the specified backend"""
     # Use local signing by default

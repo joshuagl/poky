@@ -659,8 +659,12 @@ def sstate_package(ss, d):
     if d.getVar('SSTATE_SKIP_CREATION') == '1':
         return
 
+    sstate_create_package = ['sstate_report_unihash', 'sstate_create_package']
+    if d.getVar('SSTATE_SIG_KEY'):
+        sstate_create_package.append('sstate_sign_package')
+
     for f in (d.getVar('SSTATECREATEFUNCS') or '').split() + \
-             ['sstate_report_unihash', 'sstate_create_package', 'sstate_sign_package'] + \
+             sstate_create_package + \
              (d.getVar('SSTATEPOSTCREATEFUNCS') or '').split():
         # All hooks should run in SSTATE_BUILDDIR.
         bb.build.exec_func(f, d, (sstatebuild,))
@@ -774,7 +778,7 @@ sstate_create_package () {
 }
 
 python sstate_sign_package () {
-    from oe.gpg_sign import get_signer
+    from oe.gpg_sign import get_signer, SignFailedError
 
     if d.getVar('SSTATE_SIG_KEY'):
         signer = get_signer(d, 'local')
@@ -783,6 +787,8 @@ python sstate_sign_package () {
             os.unlink(sstate_pkg + '.sig')
         signer.detach_sign(sstate_pkg, d.getVar('SSTATE_SIG_KEY', False), None,
                            d.getVar('SSTATE_SIG_PASSPHRASE'), armor=False)
+    else:
+        raise SignFailedError("Can't sign sstate packages without key, SSTATE_SIG_KEY empty")
 }
 
 python sstate_report_unihash() {
